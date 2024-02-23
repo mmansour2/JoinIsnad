@@ -229,7 +229,7 @@ def get_voice(update: Update, context: CallbackContext) -> int:
         return GET_TWITTER_ACCOUNT
     else:
         update.message.reply_text(
-            "فقط مسموح بإرسال الرسالة الصوتية في الرد."
+            " فقط مسموح بإرسال المطلوب في الرسالة السابقة، أعد قرائتها جيداً ."
         )
         return GET_VOICE
 
@@ -245,7 +245,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAFre5sAIgtVLKzGWruNLUm0fAc-dkTD7tM")
+    updater = Updater("6918060750:AAE7w0GNJO6PXKxG5SHndkiuR3QWxnUmR5A")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
