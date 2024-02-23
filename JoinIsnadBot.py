@@ -68,7 +68,7 @@ def start(update: Update, context: CallbackContext) -> int:
         " "+"\n"
         "1️⃣-  أول خطوة للانضمام هي الانضمام للجروب المغلق."+"\n"
         " "+"\n"
-        "2️⃣-  الانضمام لجروب إسناد بيستلزم نتأكد انك شخص عربي حقيقي، لأن بيجيلنا طلبات انضمام من صهاينة بيىىىــىحدموا تطبيقات ىرجمة، فبنحتاج نفلترها."+"\n"
+        "2️⃣-  الانضمام لجروب إسناد بيستلزم نتأكد انك شخص عربي حقيقي، لأن بيجيلنا طلبات انضمام من صهاينة بيىىىــىحدموا تطبيقات تزجمة، فبنحتاج نفلترها."+"\n"
         " "+"\n"
         " "+"\n"
         "3️⃣- لذلك مطلوب منك تبعتلنا هنا رىىىـ.ـــا له فو، ـيس تحكى فيها تحــ ــيةـالىىىــلامــ صو،تياَ - كرد على الرىىىىاله هنا."+"\n"
@@ -97,7 +97,7 @@ def get_twitter_account(update: Update, context: CallbackContext) -> int:
 
         # Forward the voice message along with the user's chatid to the admin
         conversation_id = context.user_data['conversation_id']
-        admin_chat_id = '5614066882'  # Replace with your admin's chat ID
+        admin_chat_id = '516506452'  # Replace with your admin's chat ID
         voice_message_id = context.user_data['voice']['file_id']
         context.user_data['twitter_account'] = user_twitter_url
         user_username = ""
@@ -245,7 +245,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAF3I_nwqiaWynDHjVfVKEjUWtAWSZG6ap8")
+    updater = Updater("6845309288:AAFyrjQ1oO-igjh_cERWRFzXRqokLTnGi6g")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
