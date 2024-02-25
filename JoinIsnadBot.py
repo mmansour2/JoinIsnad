@@ -109,6 +109,7 @@ def select_social_platform(update: Update, context: CallbackContext) -> int:
     user = update.callback_query.from_user
     username = update.callback_query.from_user.username
     print('username:',username)
+    print('user_id:',user.id)
     context.user_data['user_username'] = username
     context.user_data['user_chat_id'] = user.id  # Store user's chat ID
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
