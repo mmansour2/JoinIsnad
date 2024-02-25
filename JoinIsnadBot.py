@@ -143,6 +143,7 @@ def start_facebook(update: Update, context: CallbackContext) -> int:
     print('username:',username)
     context.user_data['user_username'] = username
     context.user_data['user_chat_id'] = user.id  # Store user's chat ID
+    print('user_id:',user.id)
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
 
     return GET_VOICE
@@ -224,6 +225,7 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
                 " "+"\n"
                 "رقم العضوية: " + str(conversation_id)+"\n"
                 " "+"\n"
+                "Chat_id:"+ str(context.user_data['user_chat_id']) +"\n"
                 "<a href=\"tg://user?id="+str(context.user_data['user_chat_id'])+"\">أكونت تليجرام</a>"
                 " "+"\n"
                 " "+ social_link
