@@ -65,6 +65,11 @@ def start(update: Update, context: CallbackContext) -> int:
         [InlineKeyboardButton("🔵 فيسبوك / انستجرام", callback_data='Facebook')],
         [InlineKeyboardButton("🟢 تيكتوك", callback_data='TikTok')],
     ]
+
+    print('username:',update.message.from_user.username, ', user_id:', update.message.from_user.id)
+    context.user_data['user_username'] = update.message.from_user.username
+    context.user_data['user_chat_id'] = update.message.from_user.id  # Store user's chat ID
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message, reply_markup=reply_markup,  parse_mode= 'Markdown')
     return SELECT_SOCIAL_PLATFORM
@@ -75,9 +80,6 @@ def button_click(update: Update, context: CallbackContext) -> None:
 
 # Define a function to handle social platform selection
 def select_social_platform(update: Update, context: CallbackContext) -> int:
-    print('select_social_platform')
-    # query = update.callback_query
-    # social_platform = query.data
 
     query = update.callback_query
     query.answer()
@@ -106,47 +108,8 @@ def select_social_platform(update: Update, context: CallbackContext) -> int:
         " "+"\n"
         "تحياتنا، ومرحباً بك.✅"+"\n"
     )
-    user = update.callback_query.from_user
-    username = update.callback_query.from_user.username
-    print('username:',username)
-    print('user_id:',user.id)
-    context.user_data['user_username'] = username
-    context.user_data['user_chat_id'] = user.id  # Store user's chat ID
+
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
-    return GET_VOICE
-
-
-# Define a function to start the conversation
-def start_facebook(update: Update, context: CallbackContext) -> int:
-    user = update.message.from_user
-    welcome_message =(
-        "*شكراً لتطوعك في إسناد* "+"\n"
-        " "+"\n"
-        "مرحباً بك، أنا *بوت إسناد الإلكتروني🤖 * لاستقبال الأعضاء الجدد:"+"\n"
-        " "+"\n"
-        "✅ قبل أي شئ يجب تعمل (اسم مستخدم - USER NAME) لحسابك تليجرام من الإعدادات"+"\n"
-        "اعمل دا .. وبعدها كمل قرادة الرساله دي 👇🏼"+"\n"
-        " "+"\n"
-        "1️⃣-  أول خطوة للانضمام هي الانضمام للجروب المغلق."+"\n"
-        " "+"\n"
-        "2️⃣-  الانضمام لجروب إسناد بيستلزم نتأكد انك شخص عربي حقيقي، لأن بيجيلنا طلبات انضمام من صهاينة بيىىىــىحدموا تطبيقات تزجمة، فبنحتاج نفلترها."+"\n"
-        " "+"\n"
-        " "+"\n"
-        "3️⃣- لذلك مطلوب منك تبعتلنا هنا رىىىـ.ـــا له فو، ـيس تحكى فيها تحــ ــيةـالىىىــلامــ صو،تياَ - كرد على الرىىىىاله هنا."+"\n"
-        " "+"\n"
-        "هذه رسالة ثابتة من بوت إسناد ، سوف تصل إلى الآدمن المختص لمراجعتها ثم الرد عليك"+"\n"
-        "فقط مسموح بإرسال التىىىجـــل الصو، تى في الرد."+"\n"
-        " "+"\n"
-        "تحياتنا، ومرحباً بك.✅"+"\n"
-    )
-    # Get the username of the user
-    username = update.message.from_user.username
-    print('username:',username)
-    context.user_data['user_username'] = username
-    context.user_data['user_chat_id'] = user.id  # Store user's chat ID
-    print('user_id:',user.id)
-    context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
-
     return GET_VOICE
 
 
@@ -156,6 +119,7 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
     profile_link = update.message.text
     # Store the user's profile link based on the selected platform
     context.user_data['profile_link'] = profile_link
+   
     user_chat_id = update.message.chat_id
     twitter_url_pattern = r'^https?://(?:www\.)?(?:twitter\.com|x\.com)/\w+'
     tiktok_url_pattern = r'^https?://(?:www\.)?tiktok\.com/@\w+'
@@ -199,11 +163,13 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
         # Forward the voice message along with the user's chatid to the admin
         conversation_id = context.user_data['conversation_id']
         # '5614066882'516506452
+        # admin_chat_ids = ['5614066882']
         # Forward the data to each admin with a label indicating the social platform
         admin_chat_ids = ['516506452', '1106597510']  # Replace with your admin's chat IDs
 
         voice_message_id = context.user_data['voice']['file_id']
         # context.user_data['twitter_account'] = user_twitter_url
+
         user_username = ""
         if context.user_data['user_username']:
             user_username = str(context.user_data['user_username'])
@@ -213,6 +179,7 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
                 "<u>بيانات العضو:</u>"+"\n"
                 " "+"\n"
                 "رقم العضوية: " + str(conversation_id)+"\n"
+                " "+"\n"
                 "أكونت تليجرام:"+"\n"
                 "@"+user_username+"\n"
                 " "+"\n"
@@ -226,8 +193,11 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
                 " "+"\n"
                 "رقم العضوية: " + str(conversation_id)+"\n"
                 " "+"\n"
-                "Chat_id:"+ str(context.user_data['user_chat_id']) +"\n"
-                "<a href=\"tg://user?id="+str(context.user_data['user_chat_id'])+"\">أكونت تليجرام</a>"
+                "<a href=\"https://web.telegram.org/a/#"+str(update.message.from_user.id)+"\"> تليجرام ويب</a>"
+                " "+"\n"
+                " "+"\n"
+                "<a href=\"tg://user?id="+str(update.message.from_user.id)+"\">أكونت تليجرام</a>"
+                " "+"\n"
                 " "+"\n"
                 " "+ social_link
             )
@@ -431,7 +401,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAF_lSaH0DoTpdYYab4B9RSjh9iqqSCXSFA")
+    updater = Updater("6891296977:AAHnnrMIqq0nLkc0eX9N8pHFnkbSOfDT6vg")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
