@@ -401,7 +401,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6891296977:AAHnnrMIqq0nLkc0eX9N8pHFnkbSOfDT6vg")
+    updater = Updater("6918060750:AAGagN6-Le5hLc-X5Pc5-01q1trHJmYH4XY")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
