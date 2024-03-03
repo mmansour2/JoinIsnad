@@ -1,7 +1,5 @@
 import datetime
 import logging
-import os
-import random
 import re
 import time
 from typing import List, Optional, Tuple
@@ -14,25 +12,15 @@ from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, ContextTypes, ConversationHandler,
                           Filters, MessageHandler, Updater, filters)
 import logging
-import random
-import threading
 import time
 from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 from typing import List
-import uuid
-import pytz
 import telegram
 from fastapi import (BackgroundTasks, Depends, FastAPI, File, Header,
                      HTTPException, Path, Query, UploadFile)
 from fastapi.background import BackgroundTasks
 from fastapi.responses import JSONResponse, PlainTextResponse
-from openpyxl import load_workbook
-from sqlalchemy import (Boolean, Column, DateTime, Integer, String,
-                        create_engine, desc, inspect,distinct, true,Sequence)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.sql.expression import false
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
                       ReplyKeyboardMarkup, ReplyKeyboardRemove, Update)
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
