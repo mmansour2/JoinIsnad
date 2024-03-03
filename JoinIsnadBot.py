@@ -5,7 +5,7 @@ import random
 import re
 import time
 from typing import List, Optional, Tuple
-
+from logging.handlers import RotatingFileHandler
 import telegram
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
@@ -13,22 +13,87 @@ from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
 from telegram.ext import (CallbackContext, CallbackQueryHandler,
                           CommandHandler, ContextTypes, ConversationHandler,
                           Filters, MessageHandler, Updater, filters)
+import logging
+import random
+import threading
+import time
+from datetime import datetime, timedelta, timezone
+from logging.handlers import RotatingFileHandler
+from typing import List
+import uuid
+import pytz
+import telegram
+from fastapi import (BackgroundTasks, Depends, FastAPI, File, Header,
+                     HTTPException, Path, Query, UploadFile)
+from fastapi.background import BackgroundTasks
+from fastapi.responses import JSONResponse, PlainTextResponse
+from openpyxl import load_workbook
+from sqlalchemy import (Boolean, Column, DateTime, Integer, String,
+                        create_engine, desc, inspect,distinct, true,Sequence)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql.expression import false
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
+                      ReplyKeyboardMarkup, ReplyKeyboardRemove, Update)
+from telegram.ext import (CallbackContext, CallbackQueryHandler,
+                          CommandHandler, ContextTypes, ConversationHandler,
+                          Filters, MessageHandler, Updater, filters)
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-# set higher logging level for httpx to avoid all GET and POST requests being logged
-logging.getLogger("httpx").setLevel(logging.WARNING)
+# configure the log format
+formatter  = logging.Formatter('%(asctime)s - %(message)s')
 
+handler = RotatingFileHandler('app.log', maxBytes=1024*1024*10, backupCount=5)
+handler.setFormatter(formatter)
+# set the logging level to INFO
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+
+# add the handler to the logger
 logger = logging.getLogger(__name__)
+logger.addHandler(handler)
 
-app = FastAPI(title="Join Isnad Bot")
+
+description = """
+
+## Isnad Tasks - Util API <img src=\'https://flagcdn.com/24x18/ps.png\'> 🔻🔻🔻
+
+
+Isnad tasks - is a powerful tool designed to streamline Isnad tasks.
+
+The following APIs provide various services for managing tasks, handling target user IDs, and reading file contents.
+
+**Key Features:**
+
+- **Reset User:**
+    Reset the user if blocked, so he can start new request. 
+
+
+**Authentication:**
+    
+Access to these services is protected by an API key mechanism. Users must provide a valid API key in the request header for authentication.
+
+**How to Use:**
+ 
+- To reset a user: Use the `/reset-user-account/` endpoint, ensuring the provided API key is valid.
+
+- To display logs: Access the `/logs/` endpoint.
+ 
+
+**Obtaining an API Key:**
+    
+For users requiring an API key, please contact `M Mansour` for assistance.
+
+"""
+
+app = FastAPI(title="Join Isnad Bot",
+              description=description,
+              summary="Isnad Tasks - Util API.",
+              version="0.0.1", swagger_ui_parameters={"defaultModelsExpandDepth": -1}
+              )
 
 
 @app.on_event("startup")
 async def startup_event():
-    print('JoinIsnad Multis Server started---- :', datetime.datetime.now())
+    print('JoinIsnad Multis Server started---- :', datetime.now())
     global is_task_running
     is_task_running = True
     try:
@@ -39,14 +104,68 @@ async def startup_event():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# Define a global variable to store the conversation ID counter
-conversation_id_counter_facebook = 1
+API_KEY_ADMIN = "iSLgvYQMFbExJGIVpJHEOEHnYxyzT4Fcr5xfSVG2Sn0q5FcrylK72Pgs3ctg0Cyp"
+
+
+# Define a dictionary to store the mapping of userid to api_key
+user_api_key_map = {
+    "user1": "Hw1MXuWmKwsG4UXlRITVvS3vkKd5xvkiKD2Z9lXPvXZ5tuUEsTGAfqT8m8AnNGuo",
+    "user2": "ERGZdjZqumtfZccYmpYwIlAO83RrqATioi6OUXQI8iiVZtG3xiKBfGgPjqgMwdvw",
+    "user3": "WbpClFZ2HnsNgbYBwsoYeVFqUGYu64a71Thj7qHA9xE7ca8zjKFw1rOQzohwVOKX",
+    "user4": "wRkBnrIMx20TPYRduKsq3SXfc8WkXh0Pj3H0hGYGJBT7qoXXxYMzTMk4JUqkyMsl",
+    "user5": "AfIZUKMWVNo0KDnMdinHqaFIZnDgEWzDBw2PgubmffcQzUj9Lh5WaTz3ilzFx8Dp",
+    "user6": "XQ5ihKJl2GqUvMM8O0Fs06UmZy6d0EeF4u3QLAMVbppzJETTul90PhQh7vI9oC4R",
+    "user7": "fEpvjfO0oZr4fb3ncjQyAYdOc3DdkiCEhlKfBiNa8biHRHTly2duw20C44QZHBCf",
+    "user8": "fKrFNeOwapEe7XrIiTRl9ufMbmxEaNGazYpemjb2VVkS8Z40fYVtgQMC46A26K7o",
+    "user9": "wJkclhGS7ROCf13YncA69meOp7sdK5iAp9ofMYxbAUc9Gm7fFJ94Xj8EEnTqIEDq",
+    "user10": "RpnNbdW9sN8zVddnuHrsFG0I2VMzY2VBI5tnrHhYqVrXiovvNsqHBNkpwjSwyyJf",
+    "user11": "SedkImeAadVNu6TloPajo4ekQohXe5yWAi7aEb7aeeHVOeYqvI464Uj9cVXhjoVF",
+    "user12": "onHGZ9U57aYeRWUiwoIpdRK4DVhCybGCQLO6xHXtW4SimPtas3j8f4K6OPpTVCEh",
+    "admin": API_KEY_ADMIN
+    # Add more users and their corresponding api keys
+}
+
+
+# Dependency to get the userid based on the provided api_key
+async def get_api_key(api_key: str = Header(..., description="API key for authentication")):
+    """
+    Get User ID
+
+    Retrieves the userid based on the provided API key.
+
+    - **api_key**: API key for authentication.
+
+    Returns the corresponding userid.
+    """
+    for userid, key in user_api_key_map.items():
+        if key == api_key:
+            return userid
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid API key",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+# Dependency to check the admin API key
+
+
+def get_admin_api_key(api_key: str = Header(..., description="Admin API key for authentication")):
+    if api_key != API_KEY_ADMIN:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid admin API key",
+        )
+    return api_key
+
 
 # Define a global variable to store the conversation ID counter
-conversation_id_counter_twitter = 1
+conversation_id_counter_facebook = 145
 
 # Define a global variable to store the conversation ID counter
-conversation_id_counter_tiktok = 1
+conversation_id_counter_twitter = 176
+
+# Define a global variable to store the conversation ID counter
+conversation_id_counter_tiktok = 22
 
 # Set to store blocked user chat IDs
 blocked_users = set()
@@ -55,6 +174,40 @@ blocked_users = set()
 SELECT_SOCIAL_PLATFORM, GET_VOICE, GET_PROFILE_LINK, BLOCKED = range(4)
 
 welcome_message = "اختار المنصة التي تود العمل عليها في *حملة إسناد*:\n\n"
+
+
+
+# Endpoint to reset the user request
+@app.post("/reset-user-account/")
+async def reset_user_account(
+    api_key: str = Depends(get_api_key),
+    user_chat_id: str = Query(..., title="User Chat_ID",
+                           description="User Chat_id of the user."),
+):
+    """
+    Reset the user if blocked, so he can start new request
+
+
+    - **user_chat_id**: User Chat_id of the user.
+
+    Returns a confirmation message.
+    """
+    try:
+        user_id_int = int(user_chat_id)  
+        return_msg = f'Reset user with chat_id {user_chat_id} successfully'
+        if user_id_int in blocked_users:
+            blocked_users.remove(user_id_int)
+            logger.info('Request from UserID: ' +
+                    api_key+f' - Reset user with chat_id {user_chat_id} successfully')
+        else:
+            return_msg = f'Reset user with chat_id {user_chat_id}, user doesnot exit in the block list.'
+            logger.info('Request from UserID: ' +
+                    api_key+f' - Reset user with chat_id {user_chat_id}, user doesnot exit in the block list.')
+            
+        return JSONResponse(content={"message": return_msg}, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reset the user: {str(e)}")
+
 
 
 # Define a function to start the conversation
@@ -183,6 +336,8 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
                 "أكونت تليجرام:"+"\n"
                 "@"+user_username+"\n"
                 " "+"\n"
+                "رقم العضو لإعادة الطلب: " + str(update.message.from_user.id)+"\n"
+                " "+"\n"
                 " "+ social_link
                 )
         else:
@@ -198,6 +353,8 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
                 " "+"\n"
                 "<a href=\"tg://user?id="+str(update.message.from_user.id)+"\">أكونت تليجرام</a>"
                 " "+"\n"
+                " "+"\n"
+                "رقم العضو لإعادة الطلب: " + str(update.message.from_user.id)+"\n"
                 " "+"\n"
                 " "+ social_link
             )
@@ -247,7 +404,22 @@ def blocked_message_handler(update: Update, context: CallbackContext) -> None:
         )
     else:
         # Process the message as usual
-        pass
+        # Ask the user to select a social platform
+        keyboard = [
+        [InlineKeyboardButton("🔴 تويتر", callback_data='Twitter')],
+        [InlineKeyboardButton("🔵 فيسبوك / انستجرام", callback_data='Facebook')],
+        [InlineKeyboardButton("🟢 تيكتوك", callback_data='TikTok')],
+        ]
+        welcome_message = "تم حذف الطلب السابق, يمكنك تقديم طلب جديد. تأكد من إستكمال كل المطلوب لضمان الموافقة علي الطلب."
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
+        welcome_message = "اختار المنصة التي تود العمل عليها في *حملة إسناد*:\n\n"
+        print('username:',update.message.from_user.username, ', user_id:', update.message.from_user.id)
+        context.user_data['user_username'] = update.message.from_user.username
+        context.user_data['user_chat_id'] = update.message.from_user.id  # Store user's chat ID
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message, reply_markup=reply_markup,  parse_mode= 'Markdown')
+        return SELECT_SOCIAL_PLATFORM
 
 
 # Define a function to get the user's voice message
@@ -401,7 +573,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAGagN6-Le5hLc-X5Pc5-01q1trHJmYH4XY")
+    updater = Updater("6918060750:AAES3NCbLWHoT19dNB-9qB8xg-TIPQdAItI")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
