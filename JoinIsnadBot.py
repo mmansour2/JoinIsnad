@@ -159,7 +159,7 @@ conversation_id_counter_tiktok = 22
 blocked_users = set()
 
 # Define conversation states
-SELECT_SOCIAL_PLATFORM, GET_VOICE, GET_PROFILE_LINK, BLOCKED = range(4)
+SELECT_SOCIAL_PLATFORM, GET_VOICE, GET_PROFILE_LINK,START_SELECTION,START_NEW_USER_VIDEO, BLOCKED = range(6)
 
 welcome_message = "اختار المنصة التي تود العمل عليها في *حملة إسناد*:\n\n"
 
@@ -202,18 +202,67 @@ async def reset_user_account(
 def start(update: Update, context: CallbackContext) -> int:
     # Ask the user to select a social platform
     keyboard = [
-        [InlineKeyboardButton("🔴 تويتر", callback_data='Twitter')],
-        [InlineKeyboardButton("🔵 فيسبوك / انستجرام", callback_data='Facebook')],
-        [InlineKeyboardButton("🟢 تيكتوك", callback_data='TikTok')],
+        [InlineKeyboardButton("🏷️ طلب عضوية جديد", callback_data='new_option')],
+        [InlineKeyboardButton("✏️ عضو بالفعل وأريد تغيير الحساب", callback_data='reset_option')],
     ]
-
-    print('username:',update.message.from_user.username, ', user_id:', update.message.from_user.id)
-    context.user_data['user_username'] = update.message.from_user.username
-    context.user_data['user_chat_id'] = update.message.from_user.id  # Store user's chat ID
     
     reply_markup = InlineKeyboardMarkup(keyboard)
+    welcome_message = "يرجي إختيار أحد الخيارات التالية:\n\n"
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message, reply_markup=reply_markup,  parse_mode= 'Markdown')
-    return SELECT_SOCIAL_PLATFORM
+    return START_SELECTION
+
+
+# Define a function to start the conversation
+def start_selection(update: Update, context: CallbackContext) -> int:
+    query = update.callback_query
+    query.answer()
+    action_selected = query.data
+    if action_selected=='reset_option':
+        welcome_message =(
+        "توجه للآدمن الموجود في جروب البرو ، أو لآدمن الدعم الفني اللي ضمك للحملة من البداية"+"\n"
+        " "+"\n")
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
+        # return BLOCKED
+    else:
+        welcome_message = "فيديو شرح خطوات العضوية:\n\n"
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message)
+        context.bot.send_video(chat_id=update.effective_chat.id, video=open('joinIsnad.mp4', 'rb'), supports_streaming=True)
+        context.user_data['user_username'] = update.callback_query.from_user.username
+        context.user_data['user_chat_id'] = update.callback_query.from_user.id  # Store user's chat ID
+        
+        welcome_message = "هل شاهدت الفيديو للنهاية بشكل مؤكد؟ اكتب : نعم - لا:\n\n"
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message)
+        return START_NEW_USER_VIDEO
+    
+
+    # Define a function to start the conversation
+def start_new_user_video(update: Update, context: CallbackContext) -> int:
+    seen_video = update.message.text
+    if seen_video=='لا':
+        welcome_message =(
+        "يرجى مشاهدة الفيديو لأن أي خطأ في إتمام طلب البوت سوف يفشل استقبال طلبك بشكل نهائي"+"\n"
+        " "+"\n")
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
+        # return BLOCKED
+    elif seen_video=='نعم':
+        welcome_message = "اختار المنصة التي تود العمل عليها في *حملة إسناد*:\n\n"
+        keyboard = [
+            [InlineKeyboardButton("🔴 تويتر", callback_data='Twitter')],
+            [InlineKeyboardButton("🔵 فيسبوك / انستجرام", callback_data='Facebook')],
+            [InlineKeyboardButton("🟢 تيكتوك", callback_data='TikTok')],
+        ]
+        print('username:',update.message.from_user.username, ', user_id:', update.message.from_user.id)
+        context.user_data['user_username'] = update.message.from_user.username
+        context.user_data['user_chat_id'] = update.message.from_user.id  # Store user's chat ID
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message, reply_markup=reply_markup,  parse_mode= 'Markdown')
+        return SELECT_SOCIAL_PLATFORM
+    else:
+        welcome_message =(
+        "هل شاهدت الفيديو للنهاية بشكل مؤكد؟  اكتب : نعم - لا "+"\n"
+        " "+"\n")
+        context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
 
 # Define a function to handle button clicks
 def button_click(update: Update, context: CallbackContext) -> None:
@@ -221,7 +270,6 @@ def button_click(update: Update, context: CallbackContext) -> None:
 
 # Define a function to handle social platform selection
 def select_social_platform(update: Update, context: CallbackContext) -> int:
-
     query = update.callback_query
     query.answer()
     social_platform = query.data
@@ -239,18 +287,20 @@ def select_social_platform(update: Update, context: CallbackContext) -> int:
         " "+"\n"
         "1️⃣-  أول خطوة للانضمام هي الانضمام للجروب المغلق."+"\n"
         " "+"\n"
-        "2️⃣-  الانضمام لجروب إسناد بيستلزم نتأكد انك شخص عربي حقيقي، لأن بيجيلنا طلبات انضمام من صهاينة بيىىىــىحدموا تطبيقات تزجمة، فبنحتاج نفلترها."+"\n"
+        "2️⃣-  الانضمام لجروب إسناد بيستلزم نتأكد انك شخص عربي حقيقي."+"\n"
         " "+"\n"
         " "+"\n"
-        "3️⃣- لذلك مطلوب منك تبعتلنا هنا رىىىـ.ـــا له فو، ـيس تحكى فيها تحــ ــيةـالىىىــلامــ صو،تياَ - كرد على الرىىىىاله هنا."+"\n"
+        "3️⃣- لذلك مطلوب منك تبعتلنا هنا رىىىـ.ـــا له فو، ـيس تحكى فيها تحــ ــيةـالىىىــلامــ صو،تياَ وبعدها جملة من 4 كلمات تقول ليه بتنضم لإسناد —- تسجلها من المايك تحت في تليجرام كرد على الرىىىىاله هنا."+"\n"
         " "+"\n"
-        "هذه رسالة ثابتة من بوت إسناد ، سوف تصل إلى الآدمن المختص لمراجعتها ثم الرد عليك"+"\n"
-        "فقط مسموح بإرسال التىىىجـــل الصو، تى في الرد."+"\n"
+        "هذه رسالة ثابتة من بوت إسناد الآلي (لست إنسان)"+"\n"
+        "فقط مسموح بإرسال التىىىـ. ـجـــل الصو. تى في الرد."+"\n"
+        "إرسال أي رسالة فاضية أو غير مطابقة سيتم استبعاد طلبك."+"\n"
         " "+"\n"
         "تحياتنا، ومرحباً بك.✅"+"\n"
     )
 
     context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
+    context.bot.send_photo(chat_id=update.effective_chat.id, photo=open('voiceMsgNote.jpeg', 'rb'))
     return GET_VOICE
 
 
@@ -260,7 +310,6 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
     profile_link = update.message.text
     # Store the user's profile link based on the selected platform
     context.user_data['profile_link'] = profile_link
-   
     user_chat_id = update.message.chat_id
     twitter_url_pattern = r'^https?://(?:www\.)?(?:twitter\.com|x\.com)/\w+'
     tiktok_url_pattern = r'^https?://(?:www\.)?tiktok\.com/@\w+'
@@ -274,17 +323,17 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
         url_pattern=twitter_url_pattern
         social_emoji='<b>🔴طلب عضوية جديد تويتر</b>'
         social_link= "<a href=\""+context.user_data['profile_link']+"\">أكونت تويتر</a>"
-        error_msg = "عفواً, يرجي إرسال رابط أكونت تويتر فقط."
+        error_msg = "عفواً, مسموح فقط بإرسال رابط تويتر يبدأ بـ http بدون أي حروف قبلها."
     if social_platform=='Facebook':
         url_pattern=facebook_instagram_url_pattern
         social_emoji='<b>🔵طلب عضوية جديد فيسبوك / انستجرام</b>'
         social_link= "<a href=\""+context.user_data['profile_link']+"\">أكونت فيسبوك/انستجرام</a>"
-        error_msg = "عفواً, يرجي إرسال رابط أكونت فيس بوك أو انستجرام فقط."
+        error_msg = "عفواً, مسموح فقط بإرسال رابط أكونت فيس بوك أو انستجرام يبدأ بـ http بدون أي حروف قبلها."
     if social_platform=='TikTok':
         url_pattern=tiktok_url_pattern
         social_emoji='<b>🟢طلب عضوية جديد تيك توك</b>'
         social_link= "<a href=\""+context.user_data['profile_link']+"\">أكونت تيك توك</a>"
-        error_msg = "عفواً, يرجي إرسال رابط أكونت تيك توك فقط."
+        error_msg = "عفواً, مسموح فقط بإرسال رابط أكونت تيك توك يبدأ بـ http بدون أي حروف قبلها."
         
     if re.match(url_pattern, profile_link):
         global conversation_id_counter_twitter  # Access the global conversation ID counter Twitter
@@ -304,9 +353,9 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
         # Forward the voice message along with the user's chatid to the admin
         conversation_id = context.user_data['conversation_id']
         # '5614066882'516506452
-        # admin_chat_ids = ['5614066882']
+        admin_chat_ids = ['5614066882']
         # Forward the data to each admin with a label indicating the social platform
-        admin_chat_ids = ['516506452', '1106597510']  # Replace with your admin's chat IDs
+        # admin_chat_ids = ['516506452', '1106597510']  # Replace with your admin's chat IDs
 
         voice_message_id = context.user_data['voice']['file_id']
         # context.user_data['twitter_account'] = user_twitter_url
@@ -355,23 +404,27 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
         blocked_users.add(user_chat_id)
 
         thanks_message =(
-            "<b>طلبك قيد المراجعه من الآدمن المختص</b>"+"\n"
+            "<b>✅ طلبك قيد المراجعه من الآدمن المختص</b>"+"\n"
             " "+"\n"
-            "ساعدنا بالصبر، سنرد عليك خلال 24 ساعه على الأكثر إن شاء الله"+"\n"
+            "سيتم مراجعته والتواصل معك خلال 72 ساعة - برجاء مراجعة رسائلك على الخاص جيداً، وان لم يتم التواصل معك بعد 72 ساعة - <a href=\'https://t.me/ASKisnad_Bot\'>اضغط هنا</a> "+"\n"
             "سنراجع طلبك وفي حال انك ارسلت حساب عبري صحيح، والرسالة التأكيدية بشكل صحيح، سيتم قبول طلبك."+"\n"
             " "+"\n"
             )
         update.message.reply_text(text=thanks_message, parse_mode= 'HTML')
         thanks_message=(
-            "ونعتذر لتعدد الخطوات ، ولكن هذا لأمان الحملة ، لعدم السماح باندساس صهاينة لحساب المهمات."+"\n"
+            "🛑 برجاء عدم تغيير يوزرنيم التليجرام ولا بيانات حساباتك خلال فترة المراجعة وإلا يكون طلبك لاغياً ولا يمكن تكراره."+"\n"
+            " "+"\n"
+            "سنواجع طلبك وفي حال انك ارسلت حساب عبري صحيح ، والرساله التأكيدية بشكل صحيح، سيتم قبول طلبك."+"\n"
+        )
+        update.message.reply_text(text=thanks_message, parse_mode= 'HTML')
+        thanks_message=(
+            "ونعتذر لتعدد الخطوات ، ولكن هذا لأمان الحملة."+"\n"
             " "+"\n"
             "ـ🇵🇸"
             "لنا طلب أخير عندك بعد انضمامك لنا، ربنا أعطالنا طريقة لإسناد المقاومة ونصرة المظلومين، وأختارنا ليمسح عنا العجز والخذلان :"+"\n"
             " "+"\n"
-            "<b>\"نتمنى منك بشدة انك لا تتوقف عن تنفيذ المهمات، ولا يؤثر بك الإحباط أو الألم ، ولا تتخاذل عن استكمال المهمات يوميا، حتى يكتب لنا ربنا النصر، ويكتب لنا أجر المجاهدين المرابطين\"</b>"+"\n"
+            "<b>\"نتمنى منك بشدة انك لا تتوقف عن تنفيذ المهمات، ولا يؤثر بك الإحباط أو الألم ، ولا تتخاذل عن استكمال المهمات يوميا، حتى يكتب لنا ربنا النصر ، ويكتب لنا أجر المجاهدين المرابطين \"</b>"+"\n"
             " "+"\n"
-            " "+"\n"
-            "<b>تأكد من عمل اسم مستخدم USER NAME لحسابك من إعدادات تليجرام </b>"+"\n"
             " "+"\n"
             "تحياتنا "+"\n"
             "ومرحب بيك في إسناد "+"\n"
@@ -387,8 +440,9 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
 def blocked_message_handler(update: Update, context: CallbackContext) -> None:
     user_chat_id = update.message.chat_id
     if user_chat_id in blocked_users:
-        update.message.reply_text(
-            "طلبك قيد المراجعه من الآدمن المختص."
+        context.bot.send_message(chat_id=update.effective_chat.id,text=
+            "\"أنا لست إنسان، <b> أنا روبوت </b>، رجاء لا تعيد الخطوات ولا تكرر الخطوات ولا تعمل ريبلاي على رسائلي، ولا تمسح الشات ولا الرسائل ولا تبدأ من البداية ،، فقط ارسل المطلوب والتزم بالخطوات. كما هو موضح في الفيديو بالأعلى، وسيتم التواصل معك\"."
+        , parse_mode= 'HTML'
         )
     else:
         # Process the message as usual
@@ -401,7 +455,6 @@ def blocked_message_handler(update: Update, context: CallbackContext) -> None:
         welcome_message = "تم حذف الطلب السابق, يمكنك تقديم طلب جديد. تأكد من إستكمال كل المطلوب لضمان الموافقة علي الطلب."
         context.bot.send_message(chat_id=update.effective_chat.id,text=welcome_message,  parse_mode= 'Markdown')
         welcome_message = "اختار المنصة التي تود العمل عليها في *حملة إسناد*:\n\n"
-        print('username:',update.message.from_user.username, ', user_id:', update.message.from_user.id)
         context.user_data['user_username'] = update.message.from_user.username
         context.user_data['user_chat_id'] = update.message.from_user.id  # Store user's chat ID
         
@@ -419,129 +472,160 @@ def get_voice(update: Update, context: CallbackContext) -> int:
         social_platform = context.user_data['social_platform']
         if social_platform=='Twitter':
             voice_finished_message =(
-            "⭕️ <b>مطلوب الآن تعمل حساب عبري على تويتر بأي إيميل،، ازاي ؟</b>"+"\n"
+            "⭕️ <b>مطلوب الآن تعمل حساب صهيوني على تويتر ..هتعمله إزاي ؟</b>"+"\n"
             " "+"\n"
-            "1️⃣- تختار اسم عبري بحروف عبرية ، من جوجل او شات جي بي تي أو ممكن تختار أسامي عبرية من هنا <a href=\'https://docs.google.com/document/d/193Snn-Q268QFRNtKWJy_2WCSMjQ3WqGX3dGSdY0Wdmc/edit?usp=sharing\'>اضغط هنا</a>"+"\n"
-            "ملاحظة: أول حاجة لازم تكون مقرر اكاونت بنت ولا ولد وعمره كام، عشان تبقى المعلومات متناسقة 👌 "+"\n"
-            "ممكن اسم بحروف انجليزي عادي، مش شرط عبري، ولو الاتنين مع بعض يكون أفضل. و يكون متجانس مع اليوزرنيم."+"\n"
+            "<b> أول وأهم حاجة لازم تكون مقرّر هو أكونت بنت ولا ولد وعمره كام، عشان تبني المعلومات عليه </b>  "+"\n"
+            "<b> وضروري جدااا  . . العمر ميقلش عن 20 سنة🚫 </b>"+"\n"
             " "+"\n"
             )
-            time.sleep(1)
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
+            time.sleep(1)
             voice_finished_message =(
-            "2️⃣- تختار صورة بروفايل صهيونية (سيرش جوجل على صورة مناسبة، لا تستخدم علم اسرائيل أصبح مكشوف)"+"\n"
-            "* الصورة الشخصية: يفضل تكون لشخص عادي حتي لو من بعيد والملامح مش ظاهرة، و دي ممكن تجيبها من الفيسبوك عندهم. "+"\n"
-            "* صورة الخلفية: يفضل تكون بتعبر عن اتجاه ما، مش مجرد صورة عشوائية. "+"\n"
+            "1️⃣- تختار إسم عبري بحروف عبرية، من جوجل أو ممكن تختار من هنا (<a href=\'https://docs.google.com/document/d/193Snn-Q268QFRNtKWJy_2WCSMjQ3WqGX3dGSdY0Wdmc/edit?usp=sharing\'>اضغط هنا</a>) - أو ممكن تطلب من CHAT GPT (لو بتستخدمه) يرشحلك اسم اسرائيلي ويكتبه بحروف عبرية، أو انجليزية عادي."+"\n"
+            " "+"\n"
+            "2️⃣- هتعمل إيميل جوجل جديد والإيميل نفسه تعمله بإسمك اليهودي اللي إختارته، متعملوش عربي عشان مبيتغيرش"+"\n"
+            " "+"\n"
+            "3️⃣- الصور (لا نستخدم علم إسرائيل نهائياً) إنه مجرد حساب، لا تتقن الدور لهذه الدرجة 😄: "+"\n"
+            " "+"\n"
+            "*الصورة الشخصية: يفضل تكون لشخص عادي حتى لو من بعيد والملامح مش ظاهرة،"+"\n"
+            "ودي ممكن تتجاب من الفيسبوك أو إنستا أو تويتر من أي أكونت أجنبي."+"\n"
+            " "+"\n"
+            "* الصورة الخلفية: صورة كوڤر عادية جداً، نبعد عن أعلام إسرائيل والحاجات الدينية. "+"\n"
+            " "+"\n"
+            )
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
+            time.sleep(1)
+            voice_finished_message =(
+            "4️⃣- الحساب ميكونش فيه ولا كلمة عربي ولا بوست ولا صديق ولا لايك لأي صفحة."+"\n"
+            " "+"\n"
+            "5️⃣- يكون لوكيشن الحساب إسم الدولة إسرائيل "+"\n"
+            " بالإنجليزي Israel  أو بالعبري ישראל"+"\n"
+            " "+"\n"
+            " ولو طلب رقم تليفونك اثناء عمل الحساب، ومفيش مفر،، ممكن تدخله عادي، الرقم لن يظهر لأي أحد غيرك. ولا مشكلة."+"\n"
+            )
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
+            time.sleep(1)
+            voice_finished_message =(
+            "6️⃣-  الوصف/البايو: ممكن تكتب بالانجليزي ،، أو تاخد بايو عبري من أكاونت صهيوني حقيقي لأي حد من فيسبوك أو إنستا"+"\n"
+            " وتخلي بالك تاخده من حساب شبه حسابك (مذكر و لا مؤنث) عشان بتفرق في الصياغة."+"\n"
+            " "+"\n"
             " "+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
             time.sleep(1)
             voice_finished_message =(
-            "3️⃣- ويوزرنيم تويتر يكون رموز وارقام *مايكونش اسم عربي*. "+"\n"
-            "4️⃣- الحساب مهم جداً ميكونش فيه ولا كلمه عربي."+"\n"
-            "5️⃣- يكون لوكيشن الحساب اسم الدوله اسرائيل بالانجليزي Israel أو اسرائيل بالعبري: ישראל "+"\n"
-            " "+"\n"
+            "<b> أهم حاجة إن الأكونت يكون متسق مع بعضه مش متناقض، </b>"+"\n"
+            "<b> يعني ميبقاش إسم بنت ووصف شاب!🚫 </b>"+"\n"
+            "<b> أو صورة شابة صغيرة ومكتوب إنها جدة مثلًا🚫 </b>"+"\n"
             )
-            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
             time.sleep(1)
             voice_finished_message =(
-            "6️⃣- الوصف/البيو: يتاخد من اكاونت صهيوني فيس او تويتر، بس خلي بالك انت حسابك هايكون (ذكر ولا مؤنث) عشان بتفرق في الصياغة، او ممكن تخلي البيو انجليزي."+"\n"
+            "اعمل الحساب بالمواصفات دي .. ثم ارسل لنا رابط الحساب هنا ، أرسل الرابط مباشرة بدون عمل ريبلاي على الرسالة."+"\n"
             " "+"\n"
-            "🔴 اهم حاجه ان *الاكونت يكون متسق مع بعضه* مش متناقض،، يعني ميبقاش اسم بنت و الوصف شاب 😅"+"\n"
-            "او صورة بنت صغيرة و مكتوب انها ام مثلا او جدة.."+"\n"
+            "عند لصق الرابط في الرد هنا، تأكد انه يبدأ بـ http ولا يسبقها أي حروف أو كلمات"+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
-            time.sleep(1)
-            voice_finished_message =(
-            "بعد ما تعمل الحساب بالمواصفات دي، ابعت الرابط بتاعه هنا كرد على الرساله دي،"+"\n"
-            "ولو عملته بالفعل، راجعه الاول وحسن فيه بحسب المواصفات دي، وابعت الرابط هنا"+"\n"
-            " "+"\n"
-            "(لو مش عارف تجيب رابط تويتر، انشر تويته عندك عالحساب وهات الرابط بتاعها من الشير)"+"\n"
-            " "+"\n"
-            "*رابط وليس صورة شاشة*"+"\n"
-            )
         if social_platform=='TikTok':
             voice_finished_message =(
-            "⭕️ <b>مطلوب الآن تعمل حساب عبري على تيكتوك  بأي إيميل ،، ازاي ؟</b>"+"\n"
+            "📱 <b>الخطوة الجاية عمل حساب تيك توك بالمواصفات دي: </b>"+"\n"
             " "+"\n"
-            "1️⃣- تختار اسم عبري بحروف عبرية ، من جوجل او شات جي بي تي أو ممكن تختار أسامي عبرية من هنا <a href=\'https://docs.google.com/document/d/193Snn-Q268QFRNtKWJy_2WCSMjQ3WqGX3dGSdY0Wdmc/edit?usp=sharing\'>اضغط هنا</a>"+"\n"
-            "ملاحظة: اول حاجة لازم تكون مقرر اكاونت بنت ولا ولد  وعمره كام. عشان تبقى المعلومات متناسقة 👌 "+"\n"
-            "ممكن اسم بحروف انجليزي عادي ،، مش شرط عبري ،، ولو الاتنين مع بعض يكون أفضل. و يكون متجانس مع اليوزرنيم."+"\n"
+            "اول حاجه ضروري ننزل برنامج ل vpn Israel من المتجر و نشغله واحنا بنعمل الاكونت و بننشر منه، و خلي بالك الvpn مش بيشتغل عالتيك توك من التطبيق، بيشتغل ع المتصفح سواء عالموبايل أو اللابتوب و لو ع اللابتوب أفضل طبعا  "+"\n"
+            " "+"\n")
+            time.sleep(1)
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
+            time.sleep(1)
+            context.bot.send_photo(chat_id=update.effective_chat.id, photo=open('joinIsnadTiktok.jpeg', 'rb'))
+            voice_finished_message =(
+            "ومننساش ضروري نغير البلد و احنا بنعمل الاكونت من الخطوة اللي في الصورة👆و نخليها اسرائيل."+"\n"
             " "+"\n"
             )
             time.sleep(1)
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
             voice_finished_message =(
-            "2️⃣- تختار صورة بروفايل صهيونية (سيرش جوجل على صورة مناسبة، لا تستخدم علم اسرائيل أصبح مكشوف)"+"\n"
-            "* الصورة الشخصية : يفضل تكون لشخص عادي حتي لو من بعيد والملامح مش ظاهرة ،، وممكن تبحث وجل عن كلمة (سلفي بدون وجه). "+"\n"
+            "2️⃣- الاسم يكون يهودي وينكتب انجليزي او عبري ، والافضل يكون ثنائي مع ايموجي خصوصا لو اسم بنت ، و اليوزر نايم ثنائي انجليزي ، و بلاش موضوع ساره و ليفي و كوهين داه عشان مفقوس اوي 😀 "+"\n"
             " "+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML')
             time.sleep(1)
             voice_finished_message =(
-            "3️⃣- *ويوزر نيم حسابك مايكونش اسم عربي.*. "+"\n"
-            "4️⃣- الحساب المهم ميكونش فيه ولا كلمه عربي."+"\n"
-            "5️⃣- يكون لوكيشن الحساب اسم الدوله اسرائيل بالانجليزي Israel  أو  اسرائيل بالعبري : ישראל "+"\n"
+            "3️⃣- الصورة تكون لشخص و السيرة الذاتية او البايو تكون عبري و مناسبه لطبيعة التيك توك المرحة مع كام إيموجي "+"\n"
             " "+"\n"
+            " و الصورة و الوصف ممكن ناخدهم من اكونت اي حد صهيوني حقيقي على وسائل التواصل، بس خلي بالك انت واخدهم من اكونت ذكر ولا انثي ، عشان صياغة البايو بتفرق من ذكر لأنثي"+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
             time.sleep(1)
             voice_finished_message =(
-            "6️⃣- الوصف/البيو:  يتاخد من اكاونت صهيوني حقيقي لأي حد ،، بس خلي بالك  انت حسابك هايكون باسم (ذكر و لا مؤنث) عشان بتفرق في الصياغة.. او ممكن انجليزي."+"\n"
+            "ودي حسابات قناة مشهورة عندهم ، هنلاقي منهم  هناك في التعليقات ممكن ناخد صور واسامي و وصف منهم و نركبهم علي بعض"+"\n"
             " "+"\n"
-            "🔴 اهم حاجه ان *الاكونت يكون متسق مع بعضه* مش متناقض،، يعني ميبقاش اسم بنت و وصف شاب 😅"+"\n"
+            "  <a href=\'https://www.tiktok.com/@n12news\'>اضغط هنا</a>"+"\n"
+            "  <a href=\'https://m.facebook.com/N12News\'>أو هنا</a>"+"\n"
+            "  <a href=\'https://x.com/N12News?s=20\'>أو هنا</a>"+"\n"
             "او صورة بنت صغيرة و مكتوب انها ام مثلا او جدة.."+"\n"
             )
-            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
             time.sleep(1)
             voice_finished_message =(
-            "بعد ما تعمل الحساب بالمواصفات دي - ابعتهلي الرابط بتاعه هنا كرد على الرساله دي."+"\n"
-            "ولو عملته بالفعل، راجعه الاول وحسن فيه بحسب المواصفات دي، وابعت الرابط هنا"+"\n"
+            "اعمل الحساب بالمواصفات دي .. ثم ارسل لنا رابط الحساب هنا ، أرسل الرابط مباشرة بدون عمل ريبلاي على الرسالة."+"\n"
+            "عند لصق الرابط في الرد هنا، تأكد انه يبدأ بـ http ولا يسبقها أي حروف أو كلمات."+"\n"
             " "+"\n"
-            "*رابط وليس صورة شاشة*"+"\n"
             )
         if social_platform=='Facebook':
             voice_finished_message =(
-            "⭕️ <b>مطلوب الآن تعمل حساب عبري على فيسبوك  بأي إيميل ،، ازاي ؟</b>"+"\n"
+            "⭕️ <b>مطلوب الآن تعمل حساب صهيوني على فيسبوك أو انستا ..هتعمله إزاي ؟</b>"+"\n"
             " "+"\n"
-            "1️⃣- تختار اسم عبري بحروف عبرية ، من جوجل او شات جي بي تي أو ممكن تختار أسامي عبرية من هنا <a href=\'https://docs.google.com/document/d/193Snn-Q268QFRNtKWJy_2WCSMjQ3WqGX3dGSdY0Wdmc/edit?usp=sharing\'>اضغط هنا</a>"+"\n"
-            "ملاحظة: اول حاجة لازم تكون مقرر اكاونت بنت ولا ولد  وعمره كام. عشان تبقى المعلومات متناسقة 👌 "+"\n"
+            "<b> أول وأهم حاجة لازم تكون مقرّر هو أكونت بنت ولا ولد وعمره كام، عشان تبني المعلومات عليه </b>  "+"\n"
+            "<b> وضروري جدااا  . . العمر ميقلش عن 20 سنة🚫 </b>"+"\n"
+            " "+"\n"
+            )
+            time.sleep(1)
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
+            voice_finished_message =(
+            "1️⃣- تختار اسم عبري بحروف عبرية ، من جوجل أو ممكن تختار من هنا <a href=\'https://docs.google.com/document/d/193Snn-Q268QFRNtKWJy_2WCSMjQ3WqGX3dGSdY0Wdmc/edit?usp=sharing\'>اضغط هنا</a>"+"\n"
+            "- أو ممكن تطلب من CHAT GPT (لو بتستخدمه) يرشحلك اسم اسرائيلي ويكتبه بحروف عبرية، أو انجليزية عادي. "+"\n"
             "ممكن اسم بحروف انجليزي عادي ،، مش شرط عبري ،، ولو الاتنين مع بعض يكون أفضل. و يكون متجانس مع اليوزرنيم."+"\n"
             " "+"\n"
             )
             time.sleep(1)
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
             voice_finished_message =(
-            "2️⃣- تختار صورة بروفايل صهيونية (سيرش جوجل على صورة مناسبة، لا تستخدم علم اسرائيل أصبح مكشوف)"+"\n"
-            "* الصورة الشخصية : يفضل تكون لشخص عادي حتي لو من بعيد والملامح مش ظاهرة ،، و دي ممكن تتجاب من الفيسبوك عندهم ."+"\n"
-            "* الصورة الخلفية : يفضل تكون بتعبر عن اتجاه ما ، مش مجرد صورة عشوائية. "+"\n"
+            "2️⃣- هتعمل إيميل جوجل جديد والإيميل نفسه تعمله بإسمك اليهودي اللي إختارته، متعملوش عربي عشان مبيتغيرش"+"\n"
+            "3️⃣- الصور (منتستخدمش علم إسرائيل نهائياً. "+"\n"
+            "* الصورة الشخصية: يفضل تكون لشخص عادي حتى لو من بعيد والملامح مش ظاهرة،"+"\n"
+            "* ودي ممكن تتجاب من الفيسبوك أو إنستا أو تويتر من أي أكونت أجنبي. "+"\n"
+            " "+"\n"
+            "* * الصورة الخلفية: صورة كوڤر عادية جداً، نبعد عن أعلام إسرائيل والحاجات الدينية. "+"\n"
+            )
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
+            time.sleep(1)
+            voice_finished_message =(
+            "4️⃣-  الحساب ميكونش فيه ولا كلمة عربي ولا بوست ولا صديق ولا لايك لأي صفحة."+"\n"
+            "5️⃣- يكون لوكيشن الحساب إسم الدولة إسرائيل"+"\n"
+            " بالإنجليزي Israel  أو بالعبري ישראל "+"\n"
+            " ولو طلب رقم تليفونك اثناء عمل الحساب، ومفيش مفر،، ممكن تدخله عادي، الرقم لن يظهر لأي أحد غيرك. ولا مشكلة."+"\n"
             " "+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
             time.sleep(1)
             voice_finished_message =(
-            "3️⃣- ويوزر نيم حسابك يكون رموز وارقام *مايكونش اسم عربي*. "+"\n"
-            "4️⃣- الحساب المهم ميكونش فيه ولا كلمه عربي."+"\n"
-            "5️⃣- يكون لوكيشن الحساب اسم الدوله اسرائيل بالانجليزي Israel  أو  اسرائيل بالعبري : ישראל"+"\n"
+            "6️⃣-  الوصف/البايو: ممكن تكتب بالانجليزي ،، أو تاخد بايو عبري من أكاونت صهيوني حقيقي لأي حد من فيسبوك أو إنستا"+"\n"
+            " "+"\n"
+            " وتخلي بالك تاخده من حساب شبه حسابك (مذكر و لا مؤنث) عشان بتفرق في الصياغة."+"\n"
+            )
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
+            voice_finished_message =(
+            "<b> أهم حاجة إن الأكونت يكون متسق مع بعضه مش متناقض، </b>"+"\n"
+            "<b> يعني ميبقاش إسم بنت ووصف شاب!🚫 </b>"+"\n"
+            "<b> أو صورة شابة صغيرة ومكتوب إنها جدة مثلًا🚫 </b>"+"\n"
+            )
+            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'HTML', disable_web_page_preview=True)
+            time.sleep(1)
+            voice_finished_message =(
+            "اعمل الحساب بالمواصفات دي .. ثم ارسل لنا رابط الحساب هنا ، أرسل الرابط مباشرة بدون عمل ريبلاي على الرسالة."+"\n"
+            "عند لصق الرابط في الرد هنا، تأكد انه يبدأ بـ http ولا يسبقها أي حروف أو كلمات."+"\n"
             " "+"\n"
             )
             context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
-            time.sleep(1)
-            voice_finished_message =(
-            "6️⃣-  الوصف/البيو:  يتاخد من اكاونت صهيوني حقيقي لأي حد ،، بس خلي بالك  انت حسابك هايكون باسم (ذكر و لا مؤنث) عشان بتفرق في الصياغة.. او ممكن انجليزي."+"\n"
-            " "+"\n"
-            "🔴 اهم حاجه ان *الاكونت يكون متسق مع بعضه* مش متناقض،، يعني ميبقاش اسم بنت و وصف شاب 😅"+"\n"
-            "او صورة بنت صغيرة و مكتوب انها ام مثلا او جدة.."+"\n"
-            )
-            context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
-            time.sleep(1)
-            voice_finished_message =(
-            "بعد ما تعمل الحساب بالمواصفات دي، ابعتهلي الرابط بتاعه هنا كرد على الرساله دي،"+"\n"
-            "ولو عملته بالفعل ، راجعه وحسن فيه بحسب المواصفات دي ، وابعت الرابط هنا"+"\n"
-            " "+"\n"
-            "*رابط وليس صورة شاشة*"+"\n"
-            )
-        context.bot.send_message(chat_id=update.effective_chat.id,text=voice_finished_message,  parse_mode= 'Markdown')
         return GET_PROFILE_LINK
     else:
         update.message.reply_text(
@@ -561,7 +645,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAES3NCbLWHoT19dNB-9qB8xg-TIPQdAItI")
+    updater = Updater("6918060750:AAH9W-tfXiID0MmV5uheyz4nLdrV4usKUQU")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
@@ -571,6 +655,8 @@ def main() -> None:
         entry_points=[CommandHandler('start', start)],
         states={
             SELECT_SOCIAL_PLATFORM: [CallbackQueryHandler(select_social_platform)],
+            START_SELECTION: [CallbackQueryHandler(start_selection)],
+            START_NEW_USER_VIDEO: [MessageHandler(Filters.text & ~Filters.command, start_new_user_video)],
             GET_VOICE: [MessageHandler(Filters.all & ~Filters.command, get_voice)],
             GET_PROFILE_LINK: [MessageHandler(Filters.text & ~Filters.command, get_profile_link)],
             BLOCKED: [MessageHandler(Filters.text & ~Filters.command, blocked_message_handler)],
