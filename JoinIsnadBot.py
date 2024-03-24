@@ -371,9 +371,9 @@ def get_profile_link(update: Update, context: CallbackContext) -> int:
         # Forward the voice message along with the user's chatid to the admin
         conversation_id = context.user_data['conversation_id']
         # '5614066882'516506452
-        admin_chat_ids = ['5614066882']
+        # admin_chat_ids = ['5614066882']
         # Forward the data to each admin with a label indicating the social platform
-        # admin_chat_ids = ['516506452', '1106597510']  # Replace with your admin's chat IDs
+        admin_chat_ids = ['516506452', '1106597510']  # Replace with your admin's chat IDs
 
         voice_message_id = context.user_data['voice']['file_id']
         # context.user_data['twitter_account'] = user_twitter_url
@@ -663,7 +663,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAGszCil-X5tkDhYf-DDxklzbhlLAL_Cy98")
+    updater = Updater("6918060750:AAHdFVH6M_SGyhUsMSXC8irx71iS2Eo_7vk")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
