@@ -62,9 +62,8 @@ Access to these services is protected by an API key mechanism. Users must provid
 **How to Use:**
  
 - To reset a user: Use the `/reset-user-account/` endpoint, ensuring the provided API key is valid.
-
-- To display logs: Access the `/logs/` endpoint.
- 
+  
+- To reset all blocked users: Use the `/reset-all-users/` endpoint, ensuring the provided API key is valid.
 
 **Obtaining an API Key:**
     
@@ -195,6 +194,25 @@ async def reset_user_account(
         return JSONResponse(content={"message": return_msg}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reset the user: {str(e)}")
+
+
+# Endpoint to reset the user request
+@app.post("/reset-all-users/")
+async def reset_all_account(
+    api_key: str = Depends(get_admin_api_key)
+):
+    """
+    Reset all blocked users, so they can start new request
+
+    Returns a confirmation message.
+    """
+    try:
+        return_msg = f'Reset all users successfully'
+        blocked_users.clear()
+            
+        return JSONResponse(content={"message": return_msg}, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reset users: {str(e)}")
 
 
 
@@ -645,7 +663,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6836287653:AAF422WweYFrxlGQVDUFTKF6nzWQ1k-52Mo")
+    updater = Updater("6918060750:AAGszCil-X5tkDhYf-DDxklzbhlLAL_Cy98")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
