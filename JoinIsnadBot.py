@@ -146,13 +146,13 @@ def get_admin_api_key(api_key: str = Header(..., description="Admin API key for 
 
 
 # Define a global variable to store the conversation ID counter
-conversation_id_counter_facebook = 263
+conversation_id_counter_facebook = 514
 
 # Define a global variable to store the conversation ID counter
-conversation_id_counter_twitter = 398
+conversation_id_counter_twitter = 663
 
 # Define a global variable to store the conversation ID counter
-conversation_id_counter_tiktok = 43
+conversation_id_counter_tiktok = 53
 
 # Set to store blocked user chat IDs
 blocked_users = set()
@@ -663,7 +663,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def main() -> None:
     """Run the bot."""
     # Create the Updater and pass it your bot's token
-    updater = Updater("6918060750:AAHdFVH6M_SGyhUsMSXC8irx71iS2Eo_7vk")
+    updater = Updater("6918060750:AAGhykZeHfnlbYZErpavk_wuROVK_iDmzng")
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
